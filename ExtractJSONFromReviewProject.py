@@ -1,0 +1,105 @@
+import os 
+import streamlit as st
+from dotenv import load_dotenv, find_dotenv
+from langchain_openai import ChatOpenAI, OpenAI 
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+_ = load_dotenv(find_dotenv())
+openai_api_key = os.environ["OPENAI_API_KEY"] 
+
+template = """
+For the following text, extract the following 
+information:
+
+sentiment: Is the customer happy with the product?
+Answer Positive if yes, Negative if 
+not, Neutral if either of them, unknown if uknown.
+
+delivery_days: How many days did it take
+for the product to arrive? If this 
+information is not found, output No information about this. 
+
+price_perception: How does the customer feel about the price?
+Answer Expensive if the customer feels the product is expensive, 
+Cheap if the customer feels the product is cheap, 
+Neutral if either of them, or Unknown if unknown
+
+Format the output as bullet-point texts with 
+the following keys:
+- Sentiment
+- How log did it take to deliver?
+- How was the price perceived?
+
+Input example:
+This dress is pretty amazing. It arrived in two days, just in time for my wife's anniversary present. It is cheaper than the other dresses out there, but I think it is worth it for the extra features.
+
+Output example:
+- Sentiment: Positive
+- How long did it take to deliver? 2 days
+- How was the price perceived? Cheap
+
+text: {review}
+"""
+
+prompt = PromptTemplate(
+    input_variables=["review"],
+    template=template
+)
+
+def load_LLM(openai_api_key):
+    llm = OpenAI( temperature=0, openai_api_key=openai_api_key)
+    return llm
+
+
+st.set_page_config(page_title="Extract Key Information from Product Reviews")
+st.header("Extract Key Information from Product Reviews")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("Extract key information from a product review.")
+    st.markdown("""
+        - Sentiment 
+        - How long did it take to deliver?
+        - How was the price perceived?
+        """)
+
+with col2:
+    st.write("Contact Tariq Mansaray Tariq.Mansaray@gmail.com for your AI solutions")
+    
+
+st.markdown("## Enter your OpenAI API Key")
+
+def get_openai_api_key():
+    input_text = st.text_input(label="OpenAI API Key", placeholder="Ex: sk-2twmA8tfCb8un4...", key="openai_api_key_input", type="password" )
+    return input_text
+
+openai_api_key = get_openai_api_key()
+
+st.markdown("## Enter the product review")
+
+def get_review():
+    review_text = st.text_area(label="Product Review", label_visibility = "collapsed", placeholder="Your product review...", key ="review_input")
+    return review_text 
+
+review_input = get_review()
+
+if len(review_input.split(" ")) > 700:
+    st.write("Please enter a shorter product review. The maximum length is 700 words")
+    st.stop()
+    
+st.markdown("### Key Data Extracted:")
+if review_input:
+    if not openai_api_key:
+        st.warning("Please insert OpenAI API Key. Instructions [here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)",
+                  icon="⚠️")
+        st.stop()
+        
+    llm = load_LLM(openai_api_key=openai_api_key)
+        
+    prompt_with_review = prompt.format(
+        review=review_input
+    )
+        
+    key_data_extraction = llm(prompt_with_review)
+        
+    st.write(key_data_extraction)
